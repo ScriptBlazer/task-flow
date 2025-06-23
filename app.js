@@ -27,6 +27,22 @@ document.addEventListener("DOMContentLoaded", () => {
   setupAddCategoryForm();
 
   const projectSelect = document.getElementById("project-select");
+  projectSelect.classList.add("project-select");
+
+  // Inject Delete Project button at the top right of the screen
+  let deleteProjectBtn = document.querySelector('.delete-project-btn');
+  if (!deleteProjectBtn) {
+    deleteProjectBtn = document.createElement('button');
+    deleteProjectBtn.className = 'delete-project-btn';
+    deleteProjectBtn.textContent = 'Delete Project';
+    document.body.appendChild(deleteProjectBtn);
+  }
+
+  deleteProjectBtn.addEventListener('click', () => {
+    const selectedProject = projectSelect.value;
+    if (!selectedProject) return;
+    showProjectDeleteConfirmation(selectedProject);
+  });
 
   // === Load all projects from Firestore ===
   db.collection("projects")
@@ -58,6 +74,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (projects.length > 0) {
         const latestProject = projects[0].id;
         const app = document.getElementById("app");
+        app.classList.add("app");
         const scrollY = window.scrollY;
         app.innerHTML = "";
         window.scrollTo(0, scrollY);
@@ -86,7 +103,7 @@ function setupAddProjectForm() {
       e.preventDefault();
 
       const nameInput = document.getElementById("project-name");
-      nameInput.classList.add("project-name-input");
+      nameInput.classList.add("project-name-input", "project-name");
       const name = nameInput.value.trim();
 
       if (!name) {
@@ -138,11 +155,14 @@ function setupAddProjectForm() {
 // === Setup the "Add Category" form ===
 function setupAddCategoryForm() {
   const form = document.getElementById("add-category-form");
+  form.classList.add("add-category-form");
 
   form.addEventListener("submit", (e) => {
     e.preventDefault();
 
     const categoryName = document.getElementById("category-name").value.trim();
+    const categoryNameInput = document.getElementById("category-name");
+    categoryNameInput.classList.add("category-name");
     const projectName = document.getElementById("project-select").value;
 
     // Add category under the selected project
@@ -209,30 +229,33 @@ function loadCategory(projectName, categoryName, container) {
 
   // Create toggle to show/hide completed tasks (state stored in localStorage)
   const toggleKey = `toggleDone-${projectName}-${categoryName}`;
-  const hideDone = localStorage.getItem(toggleKey) === "true";
+  const completedVisible = localStorage.getItem(toggleKey) !== "true";
   const toggleDoneLabel = document.createElement("span");
   toggleDoneLabel.className = "toggle-done-label";
-  toggleDoneLabel.textContent = hideDone
-    ? "Show completed tasks"
-    : "Hide completed tasks";
+  toggleDoneLabel.textContent = completedVisible
+    ? "Hide completed tasks"
+    : "Show completed tasks";
 
   const toggleDoneBtn = document.createElement("button");
   toggleDoneBtn.className = "toggle-done-btn";
-  if (hideDone) toggleDoneBtn.classList.add("active");
+  if (completedVisible) toggleDoneBtn.classList.add("active");
 
   toggleDoneBtn.addEventListener("click", () => {
-    const newHide = !toggleDoneBtn.classList.contains("active");
-    localStorage.setItem(toggleKey, newHide);
+    // Now, completedVisible means toggle is ON (active)
+    const newCompletedVisible = !toggleDoneBtn.classList.contains("active");
+    localStorage.setItem(toggleKey, !newCompletedVisible); // store hideDone = !completedVisible
     toggleDoneBtn.classList.toggle("active");
-    toggleDoneLabel.textContent = newHide
-      ? "Show completed tasks"
-      : "Hide completed tasks";
+    toggleDoneLabel.textContent = newCompletedVisible
+      ? "Hide completed tasks"
+      : "Show completed tasks";
 
-    // Reload only this category
-    const scrollY = window.scrollY;
-    categoryContainer.remove(); // remove current display
-    loadCategory(projectName, categoryName, container); // reload this category
-    window.scrollTo(0, scrollY);
+    // IN-PLACE: Hide/show green tasks in this category only
+    const tasks = categoryContainer.querySelectorAll('.task');
+    tasks.forEach(task => {
+      if (task.classList.contains('green')) {
+        task.style.display = newCompletedVisible ? '' : 'none';
+      }
+    });
   });
 
   // Get all action types (Fix/Add/Update) and check if they have tasks
@@ -373,11 +396,82 @@ function loadCategory(projectName, categoryName, container) {
             status: statusValue,
             createdAt: Date.now(),
           })
-          .then(() => {
+          .then((docRef) => {
             db.collection("projects").doc(projectName).update({
               updatedAt: Date.now(),
             });
-            loadCategoriesForProject(projectName, container);
+            // IN-PLACE: Add the new task DOM node
+            const newTask = document.createElement("div");
+            newTask.className = `task white`;
+            newTask.setAttribute("data-task-id", docRef.id);
+            const titleSpan = document.createElement("span");
+            titleSpan.className = "task-title";
+            titleSpan.textContent = titleInput;
+            titleSpan.style.flexGrow = "1";
+            titleSpan.style.cursor = "pointer";
+            titleSpan.style.marginRight = "10px";
+            titleSpan.style.display = "inline-block";
+            newTask.appendChild(titleSpan);
+            // Copy statusOptions creation from above
+            const statusOptions = document.createElement("div");
+            statusOptions.className = "status-options";
+            const makeStatusOption = (label, color) => {
+              const btn = document.createElement("div");
+              btn.className = `status-option ${color}`;
+              btn.textContent = label;
+              btn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                db.collection("projects")
+                  .doc(projectName)
+                  .collection("categories")
+                  .doc(categoryName)
+                  .collection(key)
+                  .doc(docRef.id)
+                  .update({ status: color })
+                  .then(() => {
+                    db.collection("projects").doc(projectName).update({
+                      updatedAt: Date.now(),
+                    });
+                    // IN-PLACE: Update the task DOM node class
+                    newTask.className = `task ${STATUS_CLASSES[color] || "white"}`;
+                    // Hide/show if needed
+                    if (!completedVisible && color === "green") {
+                      newTask.style.display = 'none';
+                    } else {
+                      newTask.style.display = '';
+                    }
+                  });
+              });
+              return btn;
+            };
+            statusOptions.appendChild(makeStatusOption("In Progress", "orange"));
+            statusOptions.appendChild(makeStatusOption("Done", "green"));
+            statusOptions.appendChild(makeStatusOption("Unmark", "white"));
+            const deleteBtn = document.createElement("div");
+            deleteBtn.className = "status-option delete";
+            deleteBtn.textContent = "Delete";
+            deleteBtn.addEventListener("click", (e) => {
+              e.stopPropagation();
+              showConfirmation("Delete this task?", () => {
+                db.collection("projects")
+                  .doc(projectName)
+                  .collection("categories")
+                  .doc(categoryName)
+                  .collection(key)
+                  .doc(docRef.id)
+                  .delete()
+                  .then(() => {
+                    db.collection("projects").doc(projectName).update({
+                      updatedAt: Date.now(),
+                    });
+                    newTask.remove();
+                  });
+              });
+            });
+            statusOptions.appendChild(deleteBtn);
+            newTask.appendChild(statusOptions);
+            actionDiv.appendChild(newTask);
+            form.querySelector("input").value = "";
           })
           .catch((err) => console.error("Error adding task:", err));
       });
@@ -395,9 +489,13 @@ function loadCategory(projectName, categoryName, container) {
         .then((snapshot) => {
           snapshot.forEach((doc) => {
             const data = doc.data();
-            if (hideDone && data.status === "green") return;
+            // Render all tasks, but hide green if needed
             const task = document.createElement("div");
             task.className = `task ${STATUS_CLASSES[data.status] || "white"}`;
+            task.setAttribute("data-task-id", doc.id);
+            if (!completedVisible && data.status === "green") {
+              task.style.display = 'none';
+            }
 
             const titleSpan = document.createElement("span");
             titleSpan.className = "task-title";
@@ -446,7 +544,17 @@ function loadCategory(projectName, categoryName, container) {
                   db.collection("projects").doc(projectName).update({
                     updatedAt: Date.now(),
                   });
-                  loadCategoriesForProject(projectName, container);
+                  // IN-PLACE: Update the task DOM node class
+                  const taskNode = actionDiv.querySelector(`[data-task-id='${doc.id}']`);
+                  if (taskNode) {
+                    taskNode.className = `task ${STATUS_CLASSES[color] || "white"}`;
+                    // Hide/show if needed
+                    if (!completedVisible && color === "green") {
+                      taskNode.style.display = 'none';
+                    } else {
+                      taskNode.style.display = '';
+                    }
+                  }
                 });
               });
               return btn;
@@ -468,7 +576,7 @@ function loadCategory(projectName, categoryName, container) {
                   db.collection("projects").doc(projectName).update({
                     updatedAt: Date.now(),
                   });
-                  loadCategoriesForProject(projectName, container);
+                  task.remove();
                 });
               });
             });
@@ -587,11 +695,82 @@ function loadCategory(projectName, categoryName, container) {
           status: statusValue,
           createdAt: Date.now(),
         })
-        .then(() => {
+        .then((docRef) => {
           db.collection("projects").doc(projectName).update({
             updatedAt: Date.now(),
           });
-          loadCategoriesForProject(projectName, container);
+          // IN-PLACE: Add the new task DOM node
+          const newTask = document.createElement("div");
+          newTask.className = `task white`;
+          newTask.setAttribute("data-task-id", docRef.id);
+          const titleSpan = document.createElement("span");
+          titleSpan.className = "task-title";
+          titleSpan.textContent = titleInput;
+          titleSpan.style.flexGrow = "1";
+          titleSpan.style.cursor = "pointer";
+          titleSpan.style.marginRight = "10px";
+          titleSpan.style.display = "inline-block";
+          newTask.appendChild(titleSpan);
+          // Copy statusOptions creation from above
+          const statusOptions = document.createElement("div");
+          statusOptions.className = "status-options";
+          const makeStatusOption = (label, color) => {
+            const btn = document.createElement("div");
+            btn.className = `status-option ${color}`;
+            btn.textContent = label;
+            btn.addEventListener("click", (e) => {
+              e.stopPropagation();
+              db.collection("projects")
+                .doc(projectName)
+                .collection("categories")
+                .doc(categoryName)
+                .collection(key)
+                .doc(docRef.id)
+                .update({ status: color })
+                .then(() => {
+                  db.collection("projects").doc(projectName).update({
+                    updatedAt: Date.now(),
+                  });
+                  // IN-PLACE: Update the task DOM node class
+                  newTask.className = `task ${STATUS_CLASSES[color] || "white"}`;
+                  // Hide/show if needed
+                  if (!completedVisible && color === "green") {
+                    newTask.style.display = 'none';
+                  } else {
+                    newTask.style.display = '';
+                  }
+                });
+            });
+            return btn;
+          };
+          statusOptions.appendChild(makeStatusOption("In Progress", "orange"));
+          statusOptions.appendChild(makeStatusOption("Done", "green"));
+          statusOptions.appendChild(makeStatusOption("Unmark", "white"));
+          const deleteBtn = document.createElement("div");
+          deleteBtn.className = "status-option delete";
+          deleteBtn.textContent = "Delete";
+          deleteBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            showConfirmation("Delete this task?", () => {
+              db.collection("projects")
+                .doc(projectName)
+                .collection("categories")
+                .doc(categoryName)
+                .collection(key)
+                .doc(docRef.id)
+                .delete()
+                .then(() => {
+                  db.collection("projects").doc(projectName).update({
+                    updatedAt: Date.now(),
+                  });
+                  newTask.remove();
+                });
+            });
+          });
+          statusOptions.appendChild(deleteBtn);
+          newTask.appendChild(statusOptions);
+          actionDiv.appendChild(newTask);
+          form.querySelector("input").value = "";
         })
         .catch((err) => console.error("Error adding task:", err));
     });
@@ -610,9 +789,13 @@ function loadCategory(projectName, categoryName, container) {
       .then((snapshot) => {
         snapshot.forEach((doc) => {
           const data = doc.data();
-          if (hideDone && data.status === "green") return;
+          // Render all tasks, but hide green if needed
           const task = document.createElement("div");
           task.className = `task ${STATUS_CLASSES[data.status] || "white"}`;
+          task.setAttribute("data-task-id", doc.id);
+          if (!completedVisible && data.status === "green") {
+            task.style.display = 'none';
+          }
           const titleSpan = document.createElement("span");
           titleSpan.className = "task-title";
           titleSpan.textContent = data.title;
@@ -667,7 +850,17 @@ function loadCategory(projectName, categoryName, container) {
                 db.collection("projects").doc(projectName).update({
                   updatedAt: Date.now(),
                 });
-                loadCategoriesForProject(projectName, container);
+                // IN-PLACE: Update the task DOM node class
+                const taskNode = actionDiv.querySelector(`[data-task-id='${doc.id}']`);
+                if (taskNode) {
+                  taskNode.className = `task ${STATUS_CLASSES[color] || "white"}`;
+                  // Hide/show if needed
+                  if (!completedVisible && color === "green") {
+                    taskNode.style.display = 'none';
+                  } else {
+                    taskNode.style.display = '';
+                  }
+                }
               });
             });
             return btn;
@@ -687,7 +880,7 @@ function loadCategory(projectName, categoryName, container) {
                 db.collection("projects").doc(projectName).update({
                   updatedAt: Date.now(),
                 });
-                loadCategoriesForProject(projectName, container);
+                task.remove();
               });
             });
           });
@@ -818,4 +1011,110 @@ function showConfirmation(message, onConfirm) {
 function toggleSidebar() {
   const sidebar = document.querySelector(".sidebar");
   sidebar.classList.toggle("open");
+}
+
+// Custom modal for project deletion
+function showProjectDeleteConfirmation(projectName) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.style.maxWidth = '600px';
+  modal.style.width = '90%';
+
+  const bigWarning = document.createElement('div');
+  bigWarning.style.fontSize = '2rem';
+  bigWarning.style.fontWeight = 'bold';
+  bigWarning.style.color = 'red';
+  bigWarning.style.marginBottom = '1.5rem';
+  bigWarning.style.textAlign = 'center';
+  bigWarning.textContent = `You are about to delete project "${projectName}"!`;
+
+  const info = document.createElement('div');
+  info.style.fontSize = '1.2rem';
+  info.style.marginBottom = '1.5rem';
+  info.style.textAlign = 'center';
+  info.textContent = 'There is NO WAY to retrieve this information once deleted.';
+
+  const inputLabel = document.createElement('div');
+  inputLabel.style.fontSize = '1rem';
+  inputLabel.style.marginBottom = '0.5rem';
+  inputLabel.textContent = 'Type "Delete" to confirm:';
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.style.fontSize = '1.2rem';
+  input.style.padding = '0.5rem';
+  input.style.marginBottom = '1rem';
+  input.style.width = '100%';
+  input.style.boxSizing = 'border-box';
+
+  const confirmBtn = document.createElement('button');
+  confirmBtn.className = 'confirm';
+  confirmBtn.textContent = 'Delete';
+  confirmBtn.disabled = true;
+  confirmBtn.style.fontSize = '1.2rem';
+  confirmBtn.style.padding = '0.75rem 2rem';
+  confirmBtn.style.margin = '1rem 0.5rem 0 0.5rem';
+
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'cancel';
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.style.fontSize = '1.2rem';
+  cancelBtn.style.padding = '0.75rem 2rem';
+  cancelBtn.style.margin = '1rem 0.5rem 0 0.5rem';
+
+  input.addEventListener('input', () => {
+    confirmBtn.disabled = input.value !== 'Delete';
+  });
+
+  confirmBtn.addEventListener('click', () => {
+    document.body.removeChild(overlay);
+    // Proceed with deletion (same logic as before)
+    db.collection("projects").doc(projectName).collection("categories").get().then((catSnap) => {
+      const catDeletes = [];
+      catSnap.forEach((catDoc) => {
+        const catName = catDoc.id;
+        const categoryRef = db.collection("projects").doc(projectName).collection("categories").doc(catName);
+        const actionTypeDeletes = ACTION_TYPES.map(({key}) =>
+          categoryRef.collection(key).get().then((actionSnap) =>
+            Promise.all(actionSnap.docs.map((doc) => doc.ref.delete()))
+          )
+        );
+        catDeletes.push(Promise.all(actionTypeDeletes).then(() => categoryRef.delete()));
+      });
+      Promise.all(catDeletes).then(() => {
+        db.collection("projects").doc(projectName).delete().then(() => {
+          // Remove from dropdown
+          const projectSelect = document.getElementById("project-select");
+          const option = Array.from(projectSelect.options).find(opt => opt.value === projectName);
+          if (option) option.remove();
+          // Reload UI
+          if (projectSelect.options.length > 0) {
+            projectSelect.value = projectSelect.options[0].value;
+            const app = document.getElementById("app");
+            app.innerHTML = "";
+            loadCategoriesForProject(projectSelect.value, app);
+          } else {
+            const app = document.getElementById("app");
+            app.innerHTML = "<p>No projects found. Please add a project.</p>";
+          }
+        });
+      });
+    });
+  });
+
+  cancelBtn.addEventListener('click', () => {
+    document.body.removeChild(overlay);
+  });
+
+  modal.appendChild(bigWarning);
+  modal.appendChild(info);
+  modal.appendChild(inputLabel);
+  modal.appendChild(input);
+  modal.appendChild(confirmBtn);
+  modal.appendChild(cancelBtn);
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
 }

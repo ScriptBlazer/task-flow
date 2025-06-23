@@ -31,17 +31,20 @@
     <div class="sidebar">
       <h2>Projects</h2>
       <form id="add-project-form">
-        <input id="project-name" placeholder="Project name" />
-        <button type="submit">Add Project</button>
+        <input id="project-name" name="project-name" placeholder="Project name" />
+        <button type="submit" class="add-project-btn">Add Project</button>
       </form>
       <p>Select project:</p>
       <select id="project-select" required></select>
     </div>
     <div class="main-content">
-      <form id="add-category-form">
-        <input type="text" id="category-name" placeholder="New category name..." required />
-        <button type="submit">➕ Add Category</button>
-      </form>
+      <div class="category-header-row" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+        <form id="add-category-form">
+          <input type="text" id="category-name" name="category-name" placeholder="New category name..." required />
+          <button type="submit">➕ Add Category</button>
+        </form>
+        <button class="delete-project-btn">Delete Project</button>
+      </div>
       <div id="app"></div>
     </div>
   </div>
