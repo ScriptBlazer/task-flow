@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Task Flow</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/11.9.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.9.1/firebase-auth-compat.js"></script>
+
+  <!-- Your Firebase config and app logic -->
+  <script src="firebase-config.js"></script>
+  <script>
+    firebase.auth().onAuthStateChanged(user => {
+      if (!user) {
+        window.location.href = "login.html";
+      }
+    });
+  </script>
+
+  <script src="app.js" defer></script>
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <button class="hamburger" onclick="toggleSidebar()">☰</button>
+  <div class="layout">
+    <div class="sidebar">
+      <h2>Projects</h2>
+      <form id="add-project-form">
+        <input id="project-name" placeholder="Project name" />
+        <button type="submit">Add Project</button>
+      </form>
+      <p>Select project:</p>
+      <select id="project-select" required></select>
+    </div>
+    <div class="main-content">
+      <form id="add-category-form">
+        <input type="text" id="category-name" placeholder="New category name..." required />
+        <button type="submit">➕ Add Category</button>
+      </form>
+      <div id="app"></div>
+    </div>
+  </div>
+</body>
+</html>
