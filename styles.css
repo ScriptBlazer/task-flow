@@ -46,13 +46,6 @@ p {
   z-index: 3000;
 }
 
-.main-content {
-  width: 90%;
-  padding: 2rem;
-  background: #f5f5f5;
-  overflow-y: auto;
-}
-
 #project-name {
   width: 100%;
   box-sizing: border-box;
@@ -60,6 +53,8 @@ p {
   width: 100%;
   font-size: 1rem;
   padding: 0.5rem 1rem;
+  border-radius: 5px;
+  border: solid 1px #888;
 }
 
 .add-project-btn {
@@ -108,6 +103,18 @@ p {
 
 .logout:hover {
   background-color: #b3b3b3;
+}
+
+.layout {
+  display: flex;
+  height: 100vh;
+}
+
+.main-content {
+  width: 90%;
+  padding: 2rem;
+  background: #f5f5f5;
+  overflow-y: auto;
 }
 
 #app {
@@ -167,57 +174,45 @@ p {
 }
 
 .category {
-    background: white;
-    padding: 1rem;
-    margin-bottom: 2rem;
-    border-radius: 8px;
-    box-shadow: 0 4px 4px rgba(0, 0, 0, 0.1);
-    flex: 1 1 18%;
+  background: white;
+  padding: 1rem;
+  margin-bottom: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 4px rgba(0, 0, 0, 0.1);
+  flex: 1 1 18%;
 }
 
-.toggle-done-btn {
-  --width: 2.5em;
-  --height: 1.3em;
-  --padding: 0.15em;
+.heading-wrapper {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  justify-content: space-between;
+  align-items: start;
+  padding: 0.5rem 0;
+}
 
-  position: relative;
-  display: inline-block;
-  width: var(--width);
-  height: var(--height);
-  background-color: #ccc;
-  border-radius: var(--height);
-  border: none;
+.form-check-input {
   cursor: pointer;
-  transition: background-color 0.3s;
-  vertical-align: middle;
-  margin-right: 12px;
-  padding: 0; /* removes default button padding */
 }
 
-/* Circle */
-.toggle-done-btn::before {
-  content: "";
-  position: absolute;
-  width: calc(var(--height) - var(--padding) * 2);
-  height: calc(var(--height) - var(--padding) * 2);
-  top: var(--padding);
-  left: var(--padding);
-  background-color: white;
-  border-radius: 50%;
-  transition: transform 0.3s;
-}
-
-/* Active (green) state */
-.toggle-done-btn.active {
+/* Make toggle green when checked */
+.form-switch .form-check-input:checked {
   background-color: #4CAF50;
+  border-color: #4CAF50;
 }
 
-.toggle-done-btn.active::before {
-  transform: translateX(calc(var(--width) - var(--height)));
+.delete-category-btn {
+  background-color: red;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
 }
 
-.action-controls {
-  margin-bottom: 1rem;
+.delete-category-btn:hover {
+  background-color: darkred;
 }
 
 .action-type {
@@ -244,65 +239,45 @@ p {
   background-color: #9999fa;
 }
 
-.status-option.delete {
-  background-color: red; 
-  color: white;
+.action-type form input,
+.action-type form select,
+.action-type form button {
+  font-size: 14px;
+  padding: 4px 8px;
+  border-radius: 5px;
+  border: solid 1px #888;
+  margin: 0px 0px 0.5rem 0.5rem;
 }
 
-.custom-modal {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(0, 0, 0, 0.4);
-  z-index: 3000;
-}
-
-.custom-modal {
-  background: white;
-  padding: 1.5rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-  text-align: center;
-  margin: auto;
-  align-self: center;
-}
-
-.custom-modal button {
-  margin: 0.5rem;
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.custom-modal .confirm {
-  background-color: red;
-  color: white;
-}
-
-.custom-modal .cancel {
+.action-type form button {
   background-color: #ccc;
   color: black;
+  border: none;
+  border-radius: 4px;
 }
 
-.layout {
-  display: flex;
-  height: 100vh;
+.task .in-progress {
+  background-color: orange;
+  color: white;
+}
+
+.task .done {
+  background-color: green;
+  color: white;
 }
 
 .task {
-  margin-left: 1rem;
+  margin-left: 0.5rem;
   padding: 0.25rem 0.5rem;
   border-left: 10px solid #ccc;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.5rem;
   cursor: pointer;
   position: relative;
 }
 
-.task::after {
+/* .task::after {
   content: "";
-}
+} */
 
 .task:hover .status-options {
   display: inline-flex;
@@ -348,66 +323,6 @@ p {
   border-color: green;
 }
 
-.action-type form {
-  align-items: center;
-  margin-top: 8px;
-}
-
-.action-type form input,
-.action-type form select,
-.action-type form button {
-  font-size: 14px;
-  padding: 4px 8px;
-  margin: 0px 0px 10px 15px;
-}
-
-.action-type form button {
-  background-color: #ccc;
-  color: black;
-  border: none;
-  border-radius: 4px;
-}
-
-
-.task button {
-  margin-left: 8px;
-  padding: 4px 8px;
-  font-size: 12px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.task .in-progress {
-  background-color: orange;
-  color: white;
-}
-
-.task .done {
-  background-color: green;
-  color: white;
-}
-
-.task button:hover {
-  opacity: 0.8;
-}
-
-.delete-category-btn {
-  background-color: red;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 4px 10px;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.delete-category-btn:hover {
-  background-color: darkred;
-}
-
-
 .task input[type="text"] {
   padding: 4px;
   font-size: 14px;
@@ -423,11 +338,11 @@ p {
 
 }
 
-.toggle-done-label {
+/* .toggle-done-label {
   font-size: 1rem;
   margin-right: 4px;
   color: #333;
-}
+} */
 
 .action-title-wrapper {
   position: relative;
@@ -435,7 +350,6 @@ p {
   align-items: center;
   justify-content: space-between;
 }
-
 
 .remove-action-btn {
   background: none;
@@ -450,24 +364,10 @@ p {
   color: red;
 }
 
-.app {
+/* .app {
   width: 100%;
   min-height: 200px;
-}
-
-.project-name {
-  font-size: 1rem;
-  padding: 6px 10px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
-}
-
-.category-name {
-  font-size: 1rem;
-  padding: 6px 10px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
-}
+} */
 
 .action-type-selector {
   min-width: 120px;
@@ -493,72 +393,6 @@ p {
 
 .add-action-type-btn:hover {
   background-color: #6c6ccf;
-}
-
-.explainer-text {
-  font-size: 0.95em;
-  color: #b94a48;
-  margin-top: 6px;
-  margin-bottom: 8px;
-  margin-left: 2px;
-  display: block;
-  min-height: 18px;
-  line-height: 1.2;
-}
-
-.readonly-banner {
-  background: #ffeeba;
-  color: #856404;
-  padding: 1rem;
-  text-align: center;
-  font-weight: bold;
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100vw;
-  z-index: 1000;
-}
-
-.heading-wrapper {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  justify-content: space-between;
-  align-items: start;
-  padding: 0.5rem 0;
-}
-
-.form-check-input {
-  cursor: pointer;
-}
-
-/* Make toggle green when checked */
-.form-switch .form-check-input:checked {
-  background-color: #4CAF50;
-  border-color: #4CAF50;
-}
-
-.delete-category-btn {
-  background-color: #dc3545;
-  color: white;
-  border: none;
-  padding: 0.4rem 0.8rem;
-  border-radius: 4px;
-  cursor: pointer;
-  height: fit-content;
-  white-space: nowrap;
-}
-
-.delete-category-btn:hover {
-  background-color: #c82333;
-}
-
-.delete-category-btn.disabled-btn {
-  background: #ec7979 !important;
-  color: white !important;
-  border-color: #ccc !important;
-  cursor: not-allowed !important;
-  opacity: 1 !important;
-  box-shadow: none !important;
 }
 
 @media (max-width: 1800px) {
@@ -671,6 +505,111 @@ p {
   }
 }
 
+.explainer-text {
+  font-size: 0.95em;
+  color: #b94a48;
+  margin-top: 6px;
+  margin-bottom: 8px;
+  margin-left: 2px;
+  display: block;
+  min-height: 18px;
+  line-height: 1.2;
+}
+
+.readonly-banner {
+  background: #ffeeba;
+  color: #856404;
+  padding: 1rem;
+  text-align: center;
+  font-weight: bold;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100vw;
+  z-index: 1000;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: none;
+  justify-content: center;
+  align-items: center;
+}
+
+.custom-modal {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 0 20px rgba(0,0,0,0.3);
+  text-align: center;
+  max-width: 400px;
+  width: 90%;
+}
+
+.custom-modal.custom-wide {
+  max-width: 600px;
+}
+
+.custom-modal p {
+  margin-bottom: 1.5rem;
+  font-size: 1.1rem;
+}
+
+.confirm, .cancel {
+  padding: 0.75rem 2rem;
+  margin: 1rem 0.5rem 0;
+  font-size: 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.confirm {
+  background-color: #e74c3c;
+  color: white;
+}
+
+.confirm:disabled {
+  background-color: #f5b7b1;
+  cursor: not-allowed;
+}
+
+.cancel {
+  background-color: #ccc;
+  color: black;
+}
+
+.modal-warning {
+  font-size: 2rem;
+  font-weight: bold;
+  color: red;
+  margin-bottom: 1.5rem;
+}
+
+.modal-info {
+  font-size: 1.2rem;
+  margin-bottom: 1.5rem;
+}
+
+.modal-label {
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.modal-input {
+  font-size: 1.2rem;
+  padding: 0.5rem;
+  margin-bottom: 1rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
 input.disabled-btn,
 textarea.disabled-btn {
   background: #eee !important;
@@ -679,4 +618,13 @@ textarea.disabled-btn {
   border-color: #ccc !important;
   opacity: 1 !important;
   cursor: not-allowed !important;
+}
+
+.delete-category-btn.disabled-btn {
+  background: #ec7979 !important;
+  color: white !important;
+  border-color: #ccc !important;
+  cursor: not-allowed !important;
+  opacity: 1 !important;
+  box-shadow: none !important;
 }
