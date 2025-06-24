@@ -132,10 +132,9 @@ document.addEventListener("DOMContentLoaded", () => {
 function setupAddProjectForm() {
   const form = document.getElementById("add-project-form");
   const nameInput = document.getElementById("project-name");
-  let explainer = document.createElement("span");
-  explainer.className = "explainer-text";
+  let explainer = form.querySelector('.project-name-explainer');
   explainer.style.display = "none";
-  nameInput.insertAdjacentElement("afterend", explainer);
+  explainer.style.color = "white";
 
   form.addEventListener("submit", (e) => {
     e.preventDefault();
@@ -143,6 +142,9 @@ function setupAddProjectForm() {
     if (!name) {
       explainer.textContent = "Please enter a project name.";
       explainer.style.display = "block";
+      setTimeout(() => {
+        explainer.style.display = "none";
+      }, 3000);
       return;
     }
     explainer.textContent = "";
@@ -193,13 +195,25 @@ function setupAddProjectForm() {
 function setupAddCategoryForm() {
   const form = document.getElementById("add-category-form");
   form.classList.add("add-category-form");
+  const categoryNameInput = document.getElementById("category-name");
+  const explainer = form.querySelector('.category-name-explainer');
+  explainer.style.display = "none";
+  explainer.style.color = "#b94a48";
 
   form.addEventListener("submit", (e) => {
     e.preventDefault();
 
-    const categoryName = document.getElementById("category-name").value.trim();
-    const categoryNameInput = document.getElementById("category-name");
-    categoryNameInput.classList.add("category-name");
+    const categoryName = categoryNameInput.value.trim();
+    if (!categoryName) {
+      explainer.textContent = "Please enter a category name.";
+      explainer.style.display = "block";
+      setTimeout(() => {
+        explainer.style.display = "none";
+      }, 3000);
+      return;
+    }
+    explainer.textContent = "";
+    explainer.style.display = "none";
     const projectName = document.getElementById("project-select").value;
 
     // Add category under the selected project
@@ -343,7 +357,9 @@ function renderTask(
         .doc(taskData.id);
 
       if (selectedStatus === "Delete") {
-        taskRef.delete().then(() => taskElement.remove());
+        showConfirmation("Are you sure you want to delete this task?", () => {
+          taskRef.delete().then(() => taskElement.remove());
+        });
       } else {
         const statusMap = {
           "To Do": "white",
@@ -355,7 +371,7 @@ function renderTask(
           taskElement.className = `task ${newStatus}`;
           // Respect the hide completed toggle
           const toggle = document.querySelector(
-            `[data-category-name="${categoryName}"] .toggle-completed-tasks`
+            `[data-category-name=\"${categoryName}\"] .toggle-completed-tasks`
           );
           if (newStatus === "green" && toggle && !toggle.checked) {
             taskElement.style.display = "none";
@@ -428,6 +444,7 @@ function loadCategory(projectName, categoryName, container) {
   const addActionTypeBtn = addActionTypeForm.querySelector(
     ".add-action-type-btn"
   );
+  const actionTypeExplainer = addActionTypeForm.querySelector('.explainer-text');
 
   // Populate action type selector
   ACTION_TYPES.forEach((at) => {
@@ -447,7 +464,16 @@ function loadCategory(projectName, categoryName, container) {
     const existingActionType = actionTypesContainer.querySelector(
       `.action-type.${selectedActionTypeKey}`
     );
-    if (existingActionType) return;
+    if (existingActionType) {
+      actionTypeExplainer.textContent = 'This action type already exists in this category.';
+      actionTypeExplainer.style.display = 'block';
+      setTimeout(() => {
+        actionTypeExplainer.style.display = 'none';
+      }, 3000);
+      return;
+    } else {
+      actionTypeExplainer.style.display = 'none';
+    }
 
     if (actionType) {
       renderActionType(
@@ -538,34 +564,33 @@ function renderActionType(
     );
   });
 
-  const addTaskForm = actionTypeEl.querySelector(".add-task-form");
-  addTaskForm.addEventListener("submit", (e) => {
+  const addTaskForm = actionTypeEl.querySelector('.add-task-form');
+  const addTaskExplainer = addTaskForm.querySelector('.add-task-explainer');
+  addTaskExplainer.style.display = 'none';
+  addTaskExplainer.style.color = 'white';
+  addTaskForm.addEventListener('submit', (e) => {
     e.preventDefault();
     if (window.isReadOnlyUser) return;
-    const taskInput = addTaskForm.querySelector(".task-input");
+    const taskInput = addTaskForm.querySelector('.task-input');
     const taskText = taskInput.value.trim();
-    if (taskText) {
-      db.collection("projects")
-        .doc(projectName)
-        .collection("categories")
-        .doc(categoryName)
-        .collection(actionType.key)
-        .add({
-          text: taskText,
-          status: "white",
-          createdAt: Date.now(),
-        })
-        .then((docRef) => {
-          renderTask(
-            { id: docRef.id, text: taskText, status: "white" },
-            tasksContainer,
-            projectName,
-            categoryName,
-            actionType.key
-          );
-          taskInput.value = "";
-        });
+    if (!taskText) {
+      addTaskExplainer.textContent = 'Please enter a task name.';
+      addTaskExplainer.style.display = 'block';
+      setTimeout(() => {
+        addTaskExplainer.style.display = 'none';
+      }, 3000);
+      return;
     }
+    addTaskExplainer.textContent = '';
+    addTaskExplainer.style.display = 'none';
+    db.collection("projects").doc(projectName).collection("categories").doc(categoryName).collection(actionType.key).add({
+      text: taskText,
+      status: 'white',
+      createdAt: Date.now()
+    }).then(docRef => {
+      renderTask({ id: docRef.id, text: taskText, status: 'white' }, tasksContainer, projectName, categoryName, actionType.key);
+      taskInput.value = '';
+    });
   });
 
   container.appendChild(actionTypeEl);

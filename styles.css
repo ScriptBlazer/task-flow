@@ -43,6 +43,7 @@ p {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  z-index: 3000;
 }
 
 .main-content {
@@ -171,7 +172,7 @@ p {
     margin-bottom: 2rem;
     border-radius: 8px;
     box-shadow: 0 4px 4px rgba(0, 0, 0, 0.1);
-    flex: 1 1 10%;
+    flex: 1 1 18%;
 }
 
 .toggle-done-btn {
@@ -551,7 +552,14 @@ p {
   background-color: #c82333;
 }
 
-
+.delete-category-btn.disabled-btn {
+  background: #ec7979 !important;
+  color: white !important;
+  border-color: #ccc !important;
+  cursor: not-allowed !important;
+  opacity: 1 !important;
+  box-shadow: none !important;
+}
 
 @media (max-width: 1800px) {
   .sidebar {
@@ -661,4 +669,14 @@ p {
       }
     }
   }
+}
+
+input.disabled-btn,
+textarea.disabled-btn {
+  background: #eee !important;
+  color: #aaa !important;
+  pointer-events: none;
+  border-color: #ccc !important;
+  opacity: 1 !important;
+  cursor: not-allowed !important;
 }
