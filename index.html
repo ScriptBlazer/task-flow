@@ -29,27 +29,82 @@
 <body>
   <button class="hamburger" onclick="toggleSidebar()">☰</button>
   <div class="layout">
+
     <div class="sidebar">
       <h2>Projects</h2>
       <form id="add-project-form">
         <input id="project-name" name="project-name" placeholder="Project name" />
         <button type="submit" class="add-project-btn">Add Project</button>
       </form>
-      <p>Select project:</p>
-      <select id="project-select" required></select>
+      <div class="select-project">
+        <p>Select project:</p>
+        <select id="project-select" required></select>
+      </div>
       <button id="logout-btn" class="logout" >Logout</button>
     </div>
+
     <div class="main-content">
-      <div class="category-header-row" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+      <div class="category-header-row">
         <form id="add-category-form">
           <input type="text" id="category-name" name="category-name" placeholder="New category name..." required />
-          <button type="submit">➕ Add Category</button>
+          <button type="submit">Add Category</button>
         </form>
         <button class="delete-project-btn">Delete Project</button>
       </div>
       <div id="app"></div>
     </div>
+
   </div>
+
+  <template id="category-template">
+    <div class="category">
+      <div class="heading-wrapper">
+        <div class="left-section">
+          <div class="title">
+            <h2 class="category-title"></h2>
+          </div>
+          <div class="form-check form-switch">
+            <label class="form-check-label"></label>
+            <input class="form-check-input toggle-completed-tasks" type="checkbox" role="switch">
+          </div>
+        </div>
+        <button class="delete-category-btn">Delete</button>
+      </div>
+
+      <div class="action-types-container"></div>
+      <div class="add-action-type-form">
+          <select class="action-type-selector"></select>
+          <button class="add-action-type-btn">Add Action Type</button>
+      </div>
+    </div>
+  </template>
+
+  <template id="action-type-template">
+    <div class="action-type">
+        <div class="action-title-wrapper">
+            <h3 class="action-title"></h3>
+            <button class="remove-action-btn">❌</button>
+        </div>
+        <form class="add-task-form">
+            <input type="text" class="task-input" placeholder="New task..." />
+            <button type="submit">Add Task</button>
+        </form>
+        <div class="tasks-container"></div>
+    </div>
+  </template>
+
+  <template id="task-template">
+    <div class="task" draggable="true">
+      <span class="task-text"></span>
+      <div class="status-options">
+          <span class="status-option white">To Do</span>
+          <span class="status-option orange">In Progress</span>
+          <span class="status-option green">Done</span>
+          <span class="status-option delete">Delete</span>
+      </div>
+    </div>
+  </template>
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

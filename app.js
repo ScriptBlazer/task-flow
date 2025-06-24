@@ -248,452 +248,328 @@ function loadCategoriesForProject(projectName, container) {
       });
       // Restore scroll after re-render
       window.scrollTo(0, scrollY);
-      if (window.isReadOnlyUser) applyReadOnlyMode();
     });
 }
 
-// === Load one specific category within a project ===
-function loadCategory(projectName, categoryName, container) {
-  const categoryContainer = document.createElement("div");
-  categoryContainer.className = "category";
+function renderTask(
+  taskData,
+  container,
+  projectName,
+  categoryName,
+  actionTypeKey
+) {
+  const template = document.getElementById("task-template");
+  const taskElement = template.content.cloneNode(true).querySelector(".task");
+  const taskTextElement = taskElement.querySelector(".task-text");
 
-  // Create heading wrapper (title + toggle + delete)
-  const headingWrapper = document.createElement("div");
-  headingWrapper.className = "heading-wrapper";
+  taskElement.dataset.taskId = taskData.id;
+  const taskText = taskData.title || taskData.text;
+  taskTextElement.textContent = taskText;
+  taskElement.classList.add(taskData.status || "white");
 
-  // Category heading text
-  const heading = document.createElement("h2");
-  heading.textContent = `${getCategoryEmoji(categoryName)} ${categoryName}`;
+  // Add back inline editing
+  taskTextElement.addEventListener("click", () => {
+    if (window.isReadOnlyUser) return;
 
-  // Create toggle to show/hide completed tasks (state stored in localStorage)
-  const toggleKey = `toggleDone-${projectName}-${categoryName}`;
-  const completedVisible = localStorage.getItem(toggleKey) !== "true";
-
-  // Bootstrap 5 form-switch toggle
-  const toggleWrapper = document.createElement("div");
-  toggleWrapper.className = "form-check form-switch mb-0";
-
-  const toggleDoneInput = document.createElement("input");
-  toggleDoneInput.className = "form-check-input";
-  toggleDoneInput.type = "checkbox";
-  toggleDoneInput.role = "switch";
-  toggleDoneInput.id = `toggle-done-${projectName}-${categoryName}`;
-  toggleDoneInput.checked = completedVisible;
-
-  const toggleDoneLabel = document.createElement("label");
-  toggleDoneLabel.className = "form-check-label toggle-done-label";
-  toggleDoneLabel.setAttribute("for", toggleDoneInput.id);
-  toggleDoneLabel.textContent = completedVisible
-    ? "Hide completed tasks"
-    : "Show completed tasks";
-
-  toggleDoneInput.addEventListener("change", () => {
-    const newCompletedVisible = toggleDoneInput.checked;
-    localStorage.setItem(toggleKey, !newCompletedVisible); // store hideDone = !completedVisible
-    toggleDoneLabel.textContent = newCompletedVisible
-      ? "Hide completed tasks"
-      : "Show completed tasks";
-    // IN-PLACE: Hide/show green tasks in this category only
-    const tasks = categoryContainer.querySelectorAll(".task");
-    tasks.forEach((task) => {
-      if (task.classList.contains("green")) {
-        task.style.display = newCompletedVisible ? "" : "none";
-      }
-    });
-  });
-
-  toggleWrapper.appendChild(toggleDoneInput);
-  toggleWrapper.appendChild(toggleDoneLabel);
-
-  // Get all action types (Fix/Add/Update) and check if they have tasks
-  const deleteCategoryBtn = document.createElement("button");
-  deleteCategoryBtn.textContent = "🗑 Delete";
-  deleteCategoryBtn.className = "delete-category-btn";
-  deleteCategoryBtn.addEventListener("click", () => {
-    showConfirmation(
-      `Delete the entire category "${categoryName}" and all its tasks?`,
-      () => {
-        const categoryRef = db
-          .collection("projects")
-          .doc(projectName)
-          .collection("categories")
-          .doc(categoryName);
-        Promise.all(
-          ACTION_TYPES.map((type) =>
-            categoryRef
-              .collection(type.key)
-              .get()
-              .then((snapshot) =>
-                Promise.all(snapshot.docs.map((doc) => doc.ref.delete()))
-              )
-          )
-        ).then(() =>
-          categoryRef
-            .delete()
-            .then(() => loadCategoriesForProject(projectName, container))
-        );
-      }
-    );
-  });
-
-  headingWrapper.appendChild(heading);
-
-  const rightControls = document.createElement("div");
-  rightControls.style.display = "flex";
-  rightControls.style.alignItems = "center";
-  rightControls.appendChild(toggleWrapper);
-  rightControls.appendChild(deleteCategoryBtn);
-
-  headingWrapper.appendChild(rightControls);
-
-  categoryContainer.appendChild(headingWrapper);
-
-  // Helper to create and append an action type section
-  function createActionTypeSection(key, label, hasTasks) {
-    const actionDiv = document.createElement("div");
-    actionDiv.className = `action-type ${key}`;
-
-    // Create titleWrapper and its children in correct order
-    const titleWrapper = document.createElement("div");
-    titleWrapper.className = "action-title-wrapper";
-    titleWrapper.style.position = "relative";
-
-    const title = document.createElement("h3");
-    title.className = "action-type-title";
-    title.textContent = getActionEmoji(key) + " " + label;
-
-    const removeActionBtn = document.createElement("button");
-    removeActionBtn.className = "remove-action-btn";
-    removeActionBtn.textContent = "❌";
-    removeActionBtn.title = "Remove this action type";
-    removeActionBtn.style.position = "absolute";
-    removeActionBtn.style.top = "0";
-    removeActionBtn.style.right = "0";
-    removeActionBtn.addEventListener("click", () => {
-      showConfirmation(
-        "Are you sure you want to delete this action type and all its tasks?",
-        () => {
-          db.collection("projects")
-            .doc(projectName)
-            .collection("categories")
-            .doc(categoryName)
-            .collection(key)
-            .get()
-            .then((snapshot) => {
-              const deletions = snapshot.docs.map((doc) => doc.ref.delete());
-              return Promise.all(deletions);
-            })
-            .then(() => {
-              categoryContainer.removeChild(actionDiv);
-              db.collection("projects").doc(projectName).update({
-                updatedAt: Date.now(),
-              });
-            })
-            .catch((err) => {
-              console.error("Error deleting action type tasks:", err);
-            });
-        }
-      );
-    });
-    titleWrapper.appendChild(title);
-    titleWrapper.appendChild(removeActionBtn);
-    actionDiv.appendChild(titleWrapper);
-
-    const form = document.createElement("form");
-    form.className = "task-form";
-    form.innerHTML = `
-      <input type="text" class="task-input" placeholder="Task title..." required />
-      <button type="submit" class="add-task-btn">Add Task</button>
-    `;
-
-    form.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const titleInput = form.querySelector("input").value.trim();
-      const statusValue = "white";
-      if (!titleInput) return;
-      db.collection("projects")
-        .doc(projectName)
-        .collection("categories")
-        .doc(categoryName)
-        .collection(key)
-        .add({
-          title: titleInput,
-          status: statusValue,
-          createdAt: Date.now(),
-        })
-        .then((docRef) => {
-          db.collection("projects").doc(projectName).update({
-            updatedAt: Date.now(),
-          });
-          // IN-PLACE: Add the new task DOM node
-          const newTask = document.createElement("div");
-          newTask.className = `task white`;
-          newTask.setAttribute("data-task-id", docRef.id);
-          const titleSpan = document.createElement("span");
-          titleSpan.className = "task-title";
-          titleSpan.textContent = titleInput;
-          titleSpan.style.flexGrow = "1";
-          titleSpan.style.cursor = "pointer";
-          titleSpan.style.marginRight = "10px";
-          titleSpan.style.display = "inline-block";
-          newTask.appendChild(titleSpan);
-          // Copy statusOptions creation from above
-          const statusOptions = document.createElement("div");
-          statusOptions.className = "status-options";
-          const makeStatusOption = (label, color) => {
-            const btn = document.createElement("div");
-            btn.className = `status-option ${color}`;
-            btn.textContent = label;
-            btn.addEventListener("click", (e) => {
-              e.stopPropagation();
-              db.collection("projects")
-                .doc(projectName)
-                .collection("categories")
-                .doc(categoryName)
-                .collection(key)
-                .doc(docRef.id)
-                .update({ status: color })
-                .then(() => {
-                  db.collection("projects").doc(projectName).update({
-                    updatedAt: Date.now(),
-                  });
-                  // IN-PLACE: Update the task DOM node class
-                  newTask.className = `task ${
-                    STATUS_CLASSES[color] || "white"
-                  }`;
-                  // Hide/show if needed
-                  if (!completedVisible && color === "green") {
-                    newTask.style.display = "none";
-                  } else {
-                    newTask.style.display = "";
-                  }
-                });
-            });
-            return btn;
-          };
-          statusOptions.appendChild(makeStatusOption("In Progress", "orange"));
-          statusOptions.appendChild(makeStatusOption("Done", "green"));
-          statusOptions.appendChild(makeStatusOption("Unmark", "white"));
-          const deleteBtn = document.createElement("div");
-          deleteBtn.className = "status-option delete";
-          deleteBtn.textContent = "Delete";
-          deleteBtn.addEventListener("click", (e) => {
-            e.stopPropagation();
-            showConfirmation("Delete this task?", () => {
-              db.collection("projects")
-                .doc(projectName)
-                .collection("categories")
-                .doc(categoryName)
-                .collection(key)
-                .doc(docRef.id)
-                .delete()
-                .then(() => {
-                  db.collection("projects").doc(projectName).update({
-                    updatedAt: Date.now(),
-                  });
-                  newTask.remove();
-                });
-            });
-          });
-          statusOptions.appendChild(deleteBtn);
-          newTask.appendChild(statusOptions);
-          actionDiv.appendChild(newTask);
-          form.querySelector("input").value = "";
-        })
-        .catch((err) => console.error("Error adding task:", err));
-    });
-    actionDiv.appendChild(form);
-    categoryContainer.appendChild(actionDiv);
-
-    // If hasTasks, fetch and display them
-    if (hasTasks) {
-      db.collection("projects")
-        .doc(projectName)
-        .collection("categories")
-        .doc(categoryName)
-        .collection(key)
-        .orderBy("createdAt", "asc")
-        .get()
-        .then((snapshot) => {
-          snapshot.forEach((doc) => {
-            const data = doc.data();
-            // Render all tasks, but hide green if needed
-            const task = document.createElement("div");
-            task.className = `task ${STATUS_CLASSES[data.status] || "white"}`;
-            task.setAttribute("data-task-id", doc.id);
-            if (!completedVisible && data.status === "green") {
-              task.style.display = "none";
-            }
-            const titleSpan = document.createElement("span");
-            titleSpan.className = "task-title";
-            titleSpan.textContent = data.title;
-            titleSpan.style.flexGrow = "1";
-            titleSpan.style.cursor = "pointer";
-            titleSpan.style.marginRight = "10px";
-            titleSpan.style.display = "inline-block";
-            titleSpan.addEventListener("click", () => {
-              if (window.isReadOnlyUser) return;
-              const input = document.createElement("input");
-              input.type = "text";
-              input.className = "task-edit-input";
-              input.value = data.title;
-              input.style.flexGrow = "1";
-              input.style.marginRight = "10px";
-              input.style.width = "80%";
-              input.addEventListener("blur", () => {
-                const newTitle = input.value.trim();
-                if (newTitle && newTitle !== data.title) {
-                  doc.ref.update({ title: newTitle }).then(() => {
-                    // Update the DOM in place instead of reloading
-                    titleSpan.textContent = newTitle;
-                    data.title = newTitle;
-                    task.replaceChild(titleSpan, input);
-                  });
-                } else {
-                  task.replaceChild(titleSpan, input);
-                }
-              });
-              input.addEventListener("keydown", (e) => {
-                if (e.key === "Enter") input.blur();
-              });
-              task.replaceChild(input, titleSpan);
-              input.focus();
-            });
-            task.appendChild(titleSpan);
-            const statusOptions = document.createElement("div");
-            statusOptions.className = "status-options";
-            const makeStatusOption = (label, color) => {
-              const btn = document.createElement("div");
-              btn.className = `status-option ${color}`;
-              btn.textContent = label;
-              btn.addEventListener("click", (e) => {
-                e.stopPropagation();
-                doc.ref.update({ status: color }).then(() => {
-                  db.collection("projects").doc(projectName).update({
-                    updatedAt: Date.now(),
-                  });
-                  // IN-PLACE: Update the task DOM node class
-                  const taskNode = actionDiv.querySelector(
-                    `[data-task-id='${doc.id}']`
-                  );
-                  if (taskNode) {
-                    taskNode.className = `task ${
-                      STATUS_CLASSES[color] || "white"
-                    }`;
-                    // Hide/show if needed
-                    if (!completedVisible && color === "green") {
-                      taskNode.style.display = "none";
-                    } else {
-                      taskNode.style.display = "";
-                    }
-                  }
-                });
-              });
-              return btn;
-            };
-            statusOptions.appendChild(
-              makeStatusOption("In Progress", "orange")
-            );
-            statusOptions.appendChild(makeStatusOption("Done", "green"));
-            statusOptions.appendChild(makeStatusOption("Unmark", "white"));
-            const deleteBtn = document.createElement("div");
-            deleteBtn.className = "status-option delete";
-            deleteBtn.textContent = "Delete";
-            deleteBtn.addEventListener("click", (e) => {
-              e.stopPropagation();
-              showConfirmation("Delete this task?", () => {
-                doc.ref.delete().then(() => {
-                  db.collection("projects").doc(projectName).update({
-                    updatedAt: Date.now(),
-                  });
-                  task.remove();
-                });
-              });
-            });
-            statusOptions.appendChild(deleteBtn);
-            task.appendChild(statusOptions);
-            actionDiv.appendChild(task);
-          });
-        });
+    const input = document.createElement("input");
+    input.type = "text";
+    input.value = taskTextElement.textContent;
+    input.className = "task-input"; // Use existing class for styling
+    taskElement.insertBefore(input, taskTextElement);
+    if (taskTextElement.parentElement === taskElement) {
+      taskElement.removeChild(taskTextElement);
     }
-  }
+    input.focus();
 
-  // --- Begin Firestore query for each action type and dynamic action div creation ---
-  const actionKeysToCheck = ACTION_TYPES.map(({ key }) => key);
-  Promise.all(
-    actionKeysToCheck.map((key) =>
-      db
+    const saveChanges = () => {
+      const newText = input.value.trim();
+      const taskRef = db
         .collection("projects")
         .doc(projectName)
         .collection("categories")
         .doc(categoryName)
-        .collection(key)
-        .get()
-        .then((snapshot) => ({ key, hasTasks: !snapshot.empty }))
-    )
-  ).then((results) => {
-    results.forEach(({ key, hasTasks }) => {
-      const existing = categoryContainer.querySelector(`.action-type.${key}`);
-      if (existing || !hasTasks) return;
-      const { label } = ACTION_TYPES.find((type) => type.key === key);
-      createActionTypeSection(key, label, true);
+        .collection(actionTypeKey)
+        .doc(taskData.id);
+
+      if (newText && newText !== taskText) {
+        taskRef
+          .update({
+            text: newText,
+            title: firebase.firestore.FieldValue.delete(),
+          })
+          .then(() => {
+            taskTextElement.textContent = newText;
+            taskData.text = newText;
+            delete taskData.title;
+            if (input.parentElement === taskElement) {
+              taskElement.insertBefore(taskTextElement, input);
+              taskElement.removeChild(input);
+            }
+          });
+      } else {
+        if (input.parentElement === taskElement) {
+          taskElement.insertBefore(taskTextElement, input);
+          taskElement.removeChild(input);
+        }
+      }
+    };
+
+    input.addEventListener("blur", saveChanges);
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        input.blur();
+      } else if (e.key === "Escape") {
+        input.removeEventListener("blur", saveChanges);
+        if (input.parentElement === taskElement) {
+          taskElement.insertBefore(taskTextElement, input);
+          taskElement.removeChild(input);
+        }
+      }
     });
   });
-  // --- End Firestore query for each action type and dynamic action div creation ---
 
-  // Begin replacement of ACTION_TYPES.forEach block with dropdown to add action types
-  const actionTypeSelector = document.createElement("select");
-  actionTypeSelector.className = "action-type-selector";
-  actionTypeSelector.innerHTML = ACTION_TYPES.map(
-    ({ key, label }) => `<option value="${key}">${label}</option>`
-  ).join("");
+  // Status options logic
+  taskElement
+    .querySelector(".status-options")
+    .addEventListener("click", (e) => {
+      if (window.isReadOnlyUser) return;
+      const selectedStatus = e.target.textContent.trim();
+      const taskRef = db
+        .collection("projects")
+        .doc(projectName)
+        .collection("categories")
+        .doc(categoryName)
+        .collection(actionTypeKey)
+        .doc(taskData.id);
 
-  const addActionTypeBtn = document.createElement("button");
-  addActionTypeBtn.textContent = "Add Action Type";
-  addActionTypeBtn.className = "add-action-type-btn";
+      if (selectedStatus === "Delete") {
+        taskRef.delete().then(() => taskElement.remove());
+      } else {
+        const statusMap = {
+          "To Do": "white",
+          "In Progress": "orange",
+          Done: "green",
+        };
+        const newStatus = statusMap[selectedStatus];
+        taskRef.update({ status: newStatus }).then(() => {
+          taskElement.className = `task ${newStatus}`;
+          // Respect the hide completed toggle
+          const toggle = document.querySelector(
+            `[data-category-name="${categoryName}"] .toggle-completed-tasks`
+          );
+          if (newStatus === "green" && toggle && !toggle.checked) {
+            taskElement.style.display = "none";
+          } else {
+            taskElement.style.display = "";
+          }
+        });
+      }
+    });
 
-  // Explainer for action type errors
-  let actionTypeExplainer = document.createElement("span");
-  actionTypeExplainer.className = "explainer-text";
-  actionTypeExplainer.style.display = "none";
-  let actionTypeExplainerTimeout = null;
+  container.appendChild(taskElement);
+  return taskElement;
+}
 
-  const actionControls = document.createElement("div");
-  actionControls.className = "action-controls";
-  actionControls.appendChild(actionTypeSelector);
-  actionControls.appendChild(addActionTypeBtn);
-  actionControls.appendChild(actionTypeExplainer);
-  categoryContainer.appendChild(actionControls);
+function loadCategory(projectName, categoryName, container) {
+  const categoryTemplate = document.getElementById("category-template");
+  const categoryEl = categoryTemplate.content
+    .cloneNode(true)
+    .querySelector(".category");
+
+  categoryEl.dataset.categoryName = categoryName;
+  categoryEl.querySelector(".category-title").textContent = `${getCategoryEmoji(
+    categoryName
+  )} ${categoryName}`;
+
+  const deleteCategoryBtn = categoryEl.querySelector(".delete-category-btn");
+  deleteCategoryBtn.addEventListener("click", () => {
+    if (window.isReadOnlyUser) return;
+    showConfirmation(
+      `Are you sure you want to delete the category "${categoryName}"?`,
+      () => {
+        db.collection("projects")
+          .doc(projectName)
+          .collection("categories")
+          .doc(categoryName)
+          .delete()
+          .then(() => categoryEl.remove());
+      }
+    );
+  });
+
+  // "Hide completed tasks" toggle logic
+  const toggleInput = categoryEl.querySelector(".toggle-completed-tasks");
+  const toggleLabel = categoryEl.querySelector(".form-check-label");
+  const toggleKey = `toggleDone-${projectName}-${categoryName}`;
+  const shouldHideCompleted = localStorage.getItem(toggleKey) === "true";
+
+  toggleInput.checked = !shouldHideCompleted;
+  toggleLabel.textContent = toggleInput.checked
+    ? "Hide completed"
+    : "Show completed";
+
+  toggleInput.addEventListener("change", () => {
+    const isChecked = toggleInput.checked;
+    localStorage.setItem(toggleKey, !isChecked ? "true" : "false");
+    toggleLabel.textContent = isChecked ? "Hide completed" : "Show completed";
+    const tasks = categoryEl.querySelectorAll(".task.green");
+    tasks.forEach((task) => {
+      task.style.display = isChecked ? "" : "none";
+    });
+  });
+
+  const actionTypesContainer = categoryEl.querySelector(
+    ".action-types-container"
+  );
+  const addActionTypeForm = categoryEl.querySelector(".add-action-type-form");
+  const actionTypeSelector = addActionTypeForm.querySelector(
+    ".action-type-selector"
+  );
+  const addActionTypeBtn = addActionTypeForm.querySelector(
+    ".add-action-type-btn"
+  );
+
+  // Populate action type selector
+  ACTION_TYPES.forEach((at) => {
+    const option = document.createElement("option");
+    option.value = at.key;
+    option.textContent = at.label;
+    actionTypeSelector.appendChild(option);
+  });
 
   addActionTypeBtn.addEventListener("click", () => {
-    const key = actionTypeSelector.value;
-    const { label } = ACTION_TYPES.find((type) => type.key === key);
-    const existing = categoryContainer.querySelector(`.action-type.${key}`);
-    if (existing) {
-      actionTypeExplainer.textContent = `${label} action type already exists in this category.`;
-      actionTypeExplainer.style.display = "block";
-      if (actionTypeExplainerTimeout) clearTimeout(actionTypeExplainerTimeout);
-      actionTypeExplainerTimeout = setTimeout(() => {
-        actionTypeExplainer.textContent = "";
-        actionTypeExplainer.style.display = "none";
-      }, 5000);
-      return;
+    if (window.isReadOnlyUser) return;
+    const selectedActionTypeKey = actionTypeSelector.value;
+    const actionType = ACTION_TYPES.find(
+      (at) => at.key === selectedActionTypeKey
+    );
+
+    const existingActionType = actionTypesContainer.querySelector(
+      `.action-type.${selectedActionTypeKey}`
+    );
+    if (existingActionType) return;
+
+    if (actionType) {
+      renderActionType(
+        projectName,
+        categoryName,
+        actionType,
+        actionTypesContainer
+      );
     }
-    actionTypeExplainer.textContent = "";
-    actionTypeExplainer.style.display = "none";
-    if (actionTypeExplainerTimeout) clearTimeout(actionTypeExplainerTimeout);
-    // Create a new action type section (with no tasks yet)
-    createActionTypeSection(key, label, false);
   });
 
-  actionTypeSelector.addEventListener("change", () => {
-    actionTypeExplainer.textContent = "";
-    actionTypeExplainer.style.display = "none";
-    if (actionTypeExplainerTimeout) clearTimeout(actionTypeExplainerTimeout);
+  ACTION_TYPES.forEach((actionType) => {
+    db.collection("projects")
+      .doc(projectName)
+      .collection("categories")
+      .doc(categoryName)
+      .collection(actionType.key)
+      .get()
+      .then((snapshot) => {
+        if (!snapshot.empty) {
+          const tasks = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+          const actionTypeEl = renderActionType(
+            projectName,
+            categoryName,
+            actionType,
+            actionTypesContainer,
+            tasks
+          );
+          // Hide completed tasks on initial load
+          if (shouldHideCompleted) {
+            actionTypeEl.querySelectorAll(".task.green").forEach((task) => {
+              task.style.display = "none";
+            });
+          }
+        }
+      });
   });
 
-  container.appendChild(categoryContainer);
-  if (window.isReadOnlyUser) applyReadOnlyMode();
+  container.appendChild(categoryEl);
+}
+
+function renderActionType(
+  projectName,
+  categoryName,
+  actionType,
+  container,
+  tasks = []
+) {
+  const actionTypeTemplate = document.getElementById("action-type-template");
+  const actionTypeEl = actionTypeTemplate.content
+    .cloneNode(true)
+    .querySelector(".action-type");
+
+  actionTypeEl.classList.add(actionType.key);
+  actionTypeEl.querySelector(".action-title").textContent = `${getActionEmoji(
+    actionType.key
+  )} ${actionType.label}`;
+
+  const removeActionBtn = actionTypeEl.querySelector(".remove-action-btn");
+  removeActionBtn.addEventListener("click", () => {
+    if (window.isReadOnlyUser) return;
+    showConfirmation(
+      `Delete "${actionType.label}" section and all its tasks?`,
+      () => {
+        const batch = db.batch();
+        const collectionRef = db
+          .collection("projects")
+          .doc(projectName)
+          .collection("categories")
+          .doc(categoryName)
+          .collection(actionType.key);
+        collectionRef.get().then((snapshot) => {
+          snapshot.docs.forEach((doc) => batch.delete(doc.ref));
+          batch.commit().then(() => actionTypeEl.remove());
+        });
+      }
+    );
+  });
+
+  const tasksContainer = actionTypeEl.querySelector(".tasks-container");
+  tasks.forEach((taskData) => {
+    renderTask(
+      taskData,
+      tasksContainer,
+      projectName,
+      categoryName,
+      actionType.key
+    );
+  });
+
+  const addTaskForm = actionTypeEl.querySelector(".add-task-form");
+  addTaskForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (window.isReadOnlyUser) return;
+    const taskInput = addTaskForm.querySelector(".task-input");
+    const taskText = taskInput.value.trim();
+    if (taskText) {
+      db.collection("projects")
+        .doc(projectName)
+        .collection("categories")
+        .doc(categoryName)
+        .collection(actionType.key)
+        .add({
+          text: taskText,
+          status: "white",
+          createdAt: Date.now(),
+        })
+        .then((docRef) => {
+          renderTask(
+            { id: docRef.id, text: taskText, status: "white" },
+            tasksContainer,
+            projectName,
+            categoryName,
+            actionType.key
+          );
+          taskInput.value = "";
+        });
+    }
+  });
+
+  container.appendChild(actionTypeEl);
+  return actionTypeEl;
 }
 
 function getActionEmoji(key) {
