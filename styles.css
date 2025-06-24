@@ -52,7 +52,7 @@ p {
 }
 
 .logo img {
-  height: 50px;
+  height: 70px;
 }
 
 #project-name {
@@ -446,6 +446,10 @@ p {
         right: 0;
       }
 
+      h1 {
+        font-size: 2.5rem;
+      }
+
       .main-content {
         width: 100%;
         padding: 1rem;
@@ -489,6 +493,10 @@ p {
         }
 
       @media (max-width: 450px) {
+
+        h1 {
+          font-size: 1.8rem;
+        }
 
         .delete-project-btn {
           font-size: 0.8rem;
