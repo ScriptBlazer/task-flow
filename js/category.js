@@ -50,6 +50,10 @@ function setupAddCategoryForm() {
 function loadCategoriesForProject(projectName, container) {
   var scrollY = window.scrollY;
   container.innerHTML = "";
+  var projectTitle = document.getElementById('project-title');
+  if (projectTitle) {
+    projectTitle.textContent = "Project: " + projectName;
+  }
   db.collection("projects")
     .doc(projectName)
     .collection("categories")

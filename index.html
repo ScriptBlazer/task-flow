@@ -4,6 +4,7 @@
   <title>Task Flow</title>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="images/Task Flow Icon.svg" type="image/svg+xml">
 
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/11.9.1/firebase-app-compat.js"></script>
@@ -38,7 +39,9 @@
   <div class="layout">
 
     <div class="sidebar">
-      <h2>Projects</h2>
+      <div class="logo">
+        <img src="images/Task Flow Logo.svg" alt="Task Flow Logo">
+      </div>
       <form id="add-project-form">
         <input id="project-name" name="project-name" placeholder="Project name" />
         <button type="submit" class="add-project-btn">Add Project</button>
@@ -52,6 +55,7 @@
     </div>
 
     <div class="main-content">
+      <h1 id="project-title"></h1>
       <div class="category-header-row">
         <form id="add-category-form">
           <input type="text" id="category-name" name="category-name" placeholder="New category name..." />

@@ -131,6 +131,8 @@ function renderActionType(projectName, categoryName, actionType, container, task
       status: 'white',
       createdAt: Date.now()
     }).then(function(docRef) {
+      // Update parent project's updatedAt
+      db.collection('projects').doc(projectName).update({ updatedAt: Date.now() });
       renderTask({ id: docRef.id, text: taskText, status: 'white' }, tasksContainer, projectName, categoryName, actionType.key);
       taskInput.value = '';
     });

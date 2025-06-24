@@ -26,6 +26,8 @@ function renderTask(taskData, container, projectName, categoryName, actionTypeKe
       var taskRef = db.collection("projects").doc(projectName).collection("categories").doc(categoryName).collection(actionTypeKey).doc(taskData.id);
       if (newText && newText !== taskText) {
         taskRef.update({ text: newText, title: firebase.firestore.FieldValue.delete() }).then(function() {
+          // Update parent project's updatedAt
+          db.collection("projects").doc(projectName).update({ updatedAt: Date.now() });
           taskTextElement.textContent = newText;
           taskData.text = newText;
           delete taskData.title;
@@ -67,6 +69,8 @@ function renderTask(taskData, container, projectName, categoryName, actionTypeKe
       var statusMap = { "To Do": "white", "In Progress": "orange", "Done": "green" };
       var newStatus = statusMap[selectedStatus];
       taskRef.update({ status: newStatus }).then(function() {
+        // Update parent project's updatedAt
+        db.collection("projects").doc(projectName).update({ updatedAt: Date.now() });
         taskElement.className = "task " + newStatus;
         var toggle = document.querySelector('[data-category-name="' + categoryName + '"] .toggle-completed-tasks');
         if (newStatus === 'green' && toggle && !toggle.checked) {
