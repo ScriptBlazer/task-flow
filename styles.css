@@ -12,9 +12,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* h1 {
-
-} */
+h1 {
+  font-size: 3rem;
+  font-weight: bold;
+}
 
 h2 {
   font-size: 1.3rem;
@@ -44,6 +45,14 @@ p {
   flex-direction: column;
   height: 100vh;
   z-index: 3000;
+}
+
+.logo {
+  margin-bottom: 2rem;
+}
+
+.logo img {
+  height: 50px;
 }
 
 #project-name {
@@ -300,7 +309,7 @@ p {
 
 .status-option.orange {
   background-color: orange;
-  color: white;
+  color: rgb(67, 67, 67);
 }
 
 .status-option.green {
@@ -310,7 +319,12 @@ p {
 
 .status-option.white {
   background-color: #ccc;
-  color: black;
+  color: rgb(55, 54, 54);
+}
+
+.status-option.delete {
+  background-color: #e64343;
+  color: white;
 }
 
 .white {
@@ -469,6 +483,10 @@ p {
         padding: 0.3rem 0.8rem;
         min-height: 15px;
       }
+
+        .status-options {
+          display: block;
+        }
 
       @media (max-width: 450px) {
 
