@@ -344,19 +344,30 @@ p {
   border: 1px solid #ccc;
 }
 
-.project-name-input {
-  padding: 4px;
-  font-size: 18px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
-
+.edit-task-btn {
+  background: none;
+  border: none;
+  padding: 0 0.3rem;
+  margin-left: 0.2rem;
+  cursor: pointer;
+  vertical-align: middle;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  outline: none;
 }
 
-/* .toggle-done-label {
-  font-size: 1rem;
-  margin-right: 4px;
-  color: #333;
-} */
+.edit-task-btn i.fa-solid.fa-pen-to-square {
+  font-size: 1.3em;
+  color: #5c5c5c;
+  margin-left: 2px;
+  margin-right: 2px;
+  pointer-events: none;
+}
+
+.edit-task-btn {
+  display: none;
+}
 
 .action-title-wrapper {
   position: relative;
@@ -487,10 +498,18 @@ p {
         padding: 0.3rem 0.8rem;
         min-height: 15px;
       }
+      
+      .edit-task-btn {
+        display: inline-flex;
+      }
 
-        .status-options {
-          display: block;
-        }
+      .task-text {
+        cursor: default;
+      }
+
+      /* .status-options {
+        display: block;
+      } */
 
       @media (max-width: 450px) {
 
